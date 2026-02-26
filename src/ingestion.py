@@ -73,38 +73,21 @@ def convert_dicom_to_nifti(
         print(f"Espaçamento: {image.GetSpacing()}")
         print(f"Origem: {image.GetOrigin()}")
     
-    # Converte para array numpy
-    image_array = sitk.GetArrayFromImage(image)
-    
-    # Obtém metadados importantes
+    # Obtém metadados importantes (apenas para log)
     spacing = image.GetSpacing()
     origin = image.GetOrigin()
     direction = image.GetDirection()
     
-    # Ajusta a ordem dos eixos (SimpleITK usa ZYX, NIfTI usa XYZ)
-    # NIfTI espera (x, y, z) mas SimpleITK retorna (z, y, x)
-    image_array = np.transpose(image_array, (2, 1, 0))
-    
-    # Cria a matriz de afim para NIfTI
-    # A direção precisa ser ajustada também
-    affine = np.eye(4)
-    affine[:3, :3] = np.array(direction).reshape(3, 3)
-    affine[:3, 3] = origin
-    affine[0, 0] *= spacing[0]
-    affine[1, 1] *= spacing[1]
-    affine[2, 2] *= spacing[2]
-    
-    # Cria objeto NIfTI
-    nifti_img = nib.Nifti1Image(image_array, affine)
-    
-    # Salva o arquivo
+    # Salva o arquivo DIRETAMENTE com SimpleITK.
+    # SimpleITK trata automaticamente todas as matrizes de direção (direction cosines),
+    # origem e espaçamento, garantindo um NIfTI perfeitamente compatível com o 3D Slicer.
     output_path_obj = Path(output_path)
     output_path_obj.parent.mkdir(parents=True, exist_ok=True)
     
     if verbose:
         print(f"Salvando NIfTI em: {output_path}")
-    
-    nib.save(nifti_img, output_path)
+        
+    sitk.WriteImage(image, output_path)
     
     if verbose:
         print("✓ Conversão concluída com sucesso!")
