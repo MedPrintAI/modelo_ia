@@ -18,8 +18,8 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Constantes
 # ---------------------------------------------------------------------------
-SCRIPT_DIR    = Path(__file__).parent.resolve()
-PROJECT_ROOT  = SCRIPT_DIR.parent
+SCRIPT_DIR    = Path(__file__).parent.resolve()   # src/treinamento/
+PROJECT_ROOT  = SCRIPT_DIR.parent.parent           # modelo_ia/
 DATA_DIR      = PROJECT_ROOT / "data"
 MODELO_DIR    = PROJECT_ROOT / "modelo_treinado"   # coloque aqui o modelo baixado do Colab
 NNUNET_RAW    = DATA_DIR / "nnunet"

@@ -32,7 +32,7 @@ def carregar_volume(nifti_path: str, verbose: bool = True) -> tuple:
     path = Path(nifti_path)
     if not path.exists():
         script_dir = Path(__file__).parent.resolve()
-        project_root = script_dir.parent
+        project_root = script_dir.parent.parent  # src/deteccao_lesao/ → src/ → modelo_ia/
         path_alt = project_root / nifti_path
         if path_alt.exists():
             path = path_alt
@@ -825,8 +825,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    SCRIPT_DIR = Path(__file__).parent.resolve()
-    DATASET_NIFTI = SCRIPT_DIR.parent / "data" / "dataset_nifti"
+    SCRIPT_DIR    = Path(__file__).parent.resolve()      # src/deteccao_lesao/
+    DATASET_NIFTI = SCRIPT_DIR.parent.parent / "data" / "dataset_nifti"  # modelo_ia/data/
 
     kwargs = dict(
         threshold_min=args.threshold_min,

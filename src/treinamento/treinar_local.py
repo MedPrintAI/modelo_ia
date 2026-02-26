@@ -19,8 +19,8 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Caminhos
 # ---------------------------------------------------------------------------
-SCRIPT_DIR          = Path(__file__).parent.resolve()
-PROJECT_ROOT        = SCRIPT_DIR.parent
+SCRIPT_DIR          = Path(__file__).parent.resolve()   # src/treinamento/
+PROJECT_ROOT        = SCRIPT_DIR.parent.parent           # modelo_ia/
 DATA_DIR            = PROJECT_ROOT / "data"
 NNUNET_RAW_DIR      = DATA_DIR / "nnunet"
 NNUNET_PREPROC_DIR  = DATA_DIR / "nnunet_preprocessed"

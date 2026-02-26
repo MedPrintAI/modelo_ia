@@ -29,8 +29,8 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Constantes
 # ---------------------------------------------------------------------------
-SCRIPT_DIR   = Path(__file__).parent.resolve()
-PROJECT_ROOT = SCRIPT_DIR.parent
+SCRIPT_DIR   = Path(__file__).parent.resolve()   # src/treinamento/
+PROJECT_ROOT = SCRIPT_DIR.parent.parent           # modelo_ia/
 DATA_DIR     = PROJECT_ROOT / "data"
 NIFTI_DIR    = DATA_DIR / "dataset_nifti"
 

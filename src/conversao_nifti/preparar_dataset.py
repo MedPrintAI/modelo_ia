@@ -25,15 +25,17 @@ from tqdm import tqdm
 import sys
 import os
 
-SCRIPT_DIR = Path(__file__).parent.resolve()
-PROJECT_ROOT = SCRIPT_DIR.parent
+SCRIPT_DIR = Path(__file__).parent.resolve()          # src/conversao_nifti/
+SRC_DIR    = SCRIPT_DIR.parent                        # src/
+PROJECT_ROOT = SRC_DIR.parent                         # modelo_ia/
 
-sys.path.append(str(PROJECT_ROOT))
+sys.path.append(str(SCRIPT_DIR))   # permite: from ingestion import ...
 
 from ingestion import convert_dicom_to_nifti
 
 DICOM_PATH = str(PROJECT_ROOT / "data" / "dataset_dicom")
 NIFTI_PATH = str(PROJECT_ROOT / "data" / "dataset_nifti")
+
 
 
 def convert_dicom_series_to_nifti(dicom_dir: Path, output_nifti: Path):
