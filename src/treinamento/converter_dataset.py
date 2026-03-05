@@ -65,11 +65,19 @@ def converter_dataset(dataset_id: int = 1, split_treino: float = 0.8,
     pacientes = sorted([p for p in NIFTI_DIR.iterdir() if p.is_dir()])
     print(f"\n👥 Pacientes encontrados: {len(pacientes)}")
 
-    com_mascara    = [(p, p/"lesao.nii.gz") for p in pacientes if (p/"lesao.nii.gz").exists()]
-    sem_mascara    = [p for p in pacientes if not (p/"lesao.nii.gz").exists()]
+    com_mascara = []
+    sem_mascara = []
+    
+    for p in pacientes:
+        if (p / "lesao.nii.gz").exists():
+            com_mascara.append((p, p / "lesao.nii.gz"))
+        elif (p / "lesao.nii").exists():
+            com_mascara.append((p, p / "lesao.nii"))
+        else:
+            sem_mascara.append(p)
 
-    print(f"   Com máscara (lesao.nii.gz): {len(com_mascara)}")
-    print(f"   Sem máscara (só CT):        {len(sem_mascara)}")
+    print(f"   Com máscara (lesao.nii.gz ou .nii): {len(com_mascara)}")
+    print(f"   Sem máscara (só CT):               {len(sem_mascara)}")
 
     if not com_mascara:
         print("\n⚠️  Nenhum paciente tem lesao.nii.gz!")
@@ -92,8 +100,16 @@ def converter_dataset(dataset_id: int = 1, split_treino: float = 0.8,
         dst_ct   = imagens_tr / f"{prefixo}_0000.nii.gz"
         dst_mask = labels_tr  / f"{prefixo}.nii.gz"
 
-        shutil.copy2(ct_path,   dst_ct)
-        shutil.copy2(mask_path, dst_mask)
+        shutil.copy2(ct_path, dst_ct)
+        
+        # Se for .nii (descomprimido), comprime ao copiar para .nii.gz
+        if mask_path.suffix == '.nii':
+            import gzip
+            with open(mask_path, 'rb') as f_in, gzip.open(dst_mask, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        else:
+            shutil.copy2(mask_path, dst_mask)
+            
         print(f"   ✅ Treino  {idx:03d}: {pac.name}")
         copiados_tr += 1
 
@@ -103,7 +119,10 @@ def converter_dataset(dataset_id: int = 1, split_treino: float = 0.8,
 
     copiados_ts = 0
     idx_ts = n_treino + 1
-    for pac, ct_path in ts_pacientes:
+
+    # Pacientes sem máscara
+    for pac in sem_mascara:
+        ct_path = pac / "preop_ct.nii.gz"
         if not ct_path.exists():
             print(f"   ⚠️  {pac.name}: preop_ct.nii.gz não encontrado, pulando.")
             continue
@@ -111,6 +130,19 @@ def converter_dataset(dataset_id: int = 1, split_treino: float = 0.8,
         dst_ct  = imagens_ts / f"{prefixo}_0000.nii.gz"
         shutil.copy2(ct_path, dst_ct)
         print(f"   📋 Teste   {idx_ts:03d}: {pac.name} (sem máscara)")
+        copiados_ts += 1
+        idx_ts += 1
+
+    # Pacientes com máscara reservados para validação (fora do split de treino)
+    for pac, _ in teste_cm:
+        ct_path = pac / "preop_ct.nii.gz"
+        if not ct_path.exists():
+            print(f"   ⚠️  {pac.name}: preop_ct.nii.gz não encontrado, pulando.")
+            continue
+        prefixo = f"bone_{idx_ts:03d}"
+        dst_ct  = imagens_ts / f"{prefixo}_0000.nii.gz"
+        shutil.copy2(ct_path, dst_ct)
+        print(f"   🔬 Teste   {idx_ts:03d}: {pac.name} (reservado p/ validação — tem máscara)")
         copiados_ts += 1
         idx_ts += 1
 
