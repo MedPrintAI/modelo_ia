@@ -52,16 +52,21 @@ def convert_dicom_to_nifti(
     
     if verbose:
         print(f"Encontradas {len(series_ids)} série(s) DICOM")
-    
-    # Usa a primeira série encontrada
-    series_id = series_ids[0]
+
+    # Seleciona a série com mais arquivos (geralmente a sequência volumétrica de CT)
+    # Evita escolher scouts/localizadores que têm poucas imagens
+    best_series_id = max(
+        series_ids,
+        key=lambda sid: len(reader.GetGDCMSeriesFileNames(str(dicom_path), sid))
+    )
+    series_id = best_series_id
     dicom_names = reader.GetGDCMSeriesFileNames(str(dicom_path), series_id)
-    
+
     if not dicom_names:
         raise ValueError(f"Nenhum arquivo DICOM válido encontrado na série {series_id}")
-    
+
     if verbose:
-        print(f"Processando {len(dicom_names)} arquivo(s) DICOM...")
+        print(f"Série selecionada: {series_id[:40]}... ({len(dicom_names)} arquivo(s))")
     
     reader.SetFileNames(dicom_names)
     

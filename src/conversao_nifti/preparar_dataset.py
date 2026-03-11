@@ -22,6 +22,7 @@ O dataset NIfTI resultante terá a seguinte estrutura:
 
 from pathlib import Path
 from tqdm import tqdm
+import argparse
 import sys
 import os
 
@@ -38,46 +39,57 @@ NIFTI_PATH = str(PROJECT_ROOT / "data" / "dataset_nifti")
 
 
 
-def convert_dicom_series_to_nifti(dicom_dir: Path, output_nifti: Path):
+def convert_dicom_series_to_nifti(dicom_dir: Path, output_nifti: Path, verbose: bool = True):
     """
     Converte uma série DICOM em um único NIfTI
     """
-    convert_dicom_to_nifti(str(dicom_dir), str(output_nifti), verbose=False)
+    convert_dicom_to_nifti(str(dicom_dir), str(output_nifti), verbose=verbose)
 
 
 def find_series_dir(stage_dir: Path) -> Path:
     """
-    Encontra recursivamente o diretório que contém os arquivos DICOM.
-    Desce quantos níveis forem necessários até encontrar arquivos .dcm
+    Varre recursivamente todas as subpastas e retorna o diretório
+    com o maior número de arquivos DICOM (série volumétrica principal).
+    Aceita .dcm, .DCM e variantes como .mdt.DCM.jpg.
     """
-    def search_for_dicom(directory: Path) -> Path:
-        """Procura recursivamente por arquivos DICOM"""
+    best_dir: Path | None = None
+    best_count: int = 0
+
+    def search_all(directory: Path) -> None:
+        nonlocal best_dir, best_count
         try:
             items = list(directory.iterdir())
         except (PermissionError, OSError):
-            raise RuntimeError(f"Não foi possível acessar {directory}")
-        
-        # Verifica se há arquivos DICOM neste diretório
-        dicom_files = [f for f in items if f.is_file() and f.suffix.lower() == '.dcm']
-        if dicom_files:
-            return directory
-        
-        # Se não houver DCM, procura nos subdiretórios
-        subdirs = [d for d in items if d.is_dir()]
-        for subdir in subdirs:
-            try:
-                result = search_for_dicom(subdir)
-                return result
-            except RuntimeError:
-                continue
-        
-        raise RuntimeError(f"Nenhum arquivo DICOM encontrado em {directory}")
-    
-    return search_for_dicom(stage_dir)
+            return
+
+        dicom_files = [f for f in items if f.is_file() and '.dcm' in f.name.lower()]
+        if len(dicom_files) > best_count:
+            best_count = len(dicom_files)
+            best_dir = directory
+
+        for subdir in items:
+            if subdir.is_dir():
+                search_all(subdir)
+
+    search_all(stage_dir)
+
+    if best_dir is None:
+        raise RuntimeError(f"Nenhum arquivo DICOM encontrado em {stage_dir}")
+
+    return best_dir
 
 
-def build_nifti_dataset(dicom_root: Path, output_root: Path):
-    patients = [p for p in dicom_root.iterdir() if p.is_dir()]
+def build_nifti_dataset(dicom_root: Path, output_root: Path, pacientes: list[str] | None = None):
+    all_patients = [p for p in dicom_root.iterdir() if p.is_dir()]
+
+    if pacientes:
+        pacientes_lower = [n.lower() for n in pacientes]
+        patients = [p for p in all_patients if p.name.lower() in pacientes_lower]
+        nao_encontrados = set(pacientes_lower) - {p.name.lower() for p in patients}
+        if nao_encontrados:
+            print(f"⚠️ Pacientes não encontrados no dataset: {', '.join(nao_encontrados)}")
+    else:
+        patients = all_patients
 
     for patient_dir in tqdm(patients, desc="Processando pacientes"):
         patient_name = patient_dir.name
@@ -107,8 +119,20 @@ def build_nifti_dataset(dicom_root: Path, output_root: Path):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Converte dataset DICOM em NIfTI."
+    )
+    parser.add_argument(
+        "--pacientes",
+        nargs="+",
+        metavar="NOME",
+        default=None,
+        help="Nome(s) do(s) paciente(s) a converter. Se omitido, converte todos."
+    )
+    args = parser.parse_args()
+
     dicom_root = Path(DICOM_PATH)
     output_root = Path(NIFTI_PATH)
 
-    build_nifti_dataset(dicom_root, output_root)
+    build_nifti_dataset(dicom_root, output_root, pacientes=args.pacientes)
     print("\n✅ Conversão concluída com sucesso!")
